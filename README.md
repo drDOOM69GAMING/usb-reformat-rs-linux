@@ -10,7 +10,7 @@
 [![Last commit](https://img.shields.io/github/last-commit/drDOOM69GAMING/usb-reformat-rs-linux)](https://github.com/drDOOM69GAMING/usb-reformat-rs-linux/commits/main)
 [![Issues](https://img.shields.io/github/issues/drDOOM69GAMING/usb-reformat-rs-linux)](https://github.com/drDOOM69GAMING/usb-reformat-rs-linux/issues)
 [![Stars](https://img.shields.io/github/stars/drDOOM69GAMING/usb-reformat-rs-linux)](https://github.com/drDOOM69GAMING/usb-reformat-rs-linux/stargazers)
-[![Repo size](https://img.shields.io/github/repo-size/drDOOM69GAMING/usb-reformat-rs-linux)](https://github.com/drDOOM69GAMING/usb-reformat-rs-linux)
+[![Commit activity](https://img.shields.io/github/commit-activity/m/drDOOM69GAMING/usb-reformat-rs-linux)](https://github.com/drDOOM69GAMING/usb-reformat-rs-linux/graphs/commit-activity)
 
 A Linux port of the original Windows utility with the same clean, Windows 98 style GUI. It wipes, repartitions and formats USB sticks and fixed disks. All privileged operations run through `pkexec`, so the main app stays unprivileged and safe.
 
