@@ -216,6 +216,9 @@ struct App {
 impl App {
     fn set_status(&self, text: &str) {
         self.ui.status.set_label(text);
+        // The label is ellipsized so a long line cannot stretch the window;
+        // keep the whole text reachable by hovering.
+        self.ui.status.set_tooltip_text(Some(text));
     }
 
     fn shown_disks(&self) -> Vec<Disk> {
@@ -262,8 +265,9 @@ impl App {
         self.refresh();
     }
 
-    /// Re-read the disk list and rebuild the rows. The system disk is listed
-    /// but marked, and it is refused again by the worker.
+    /// Re-read the disk list and rebuild the rows. The disk that holds the
+    /// running system is left out of the list entirely, so it can never be
+    /// selected; the worker refuses it again as a second line of defence.
     fn refresh(&self) {
         let disks = match device::list_disks() {
             Ok(disks) => disks,
@@ -277,16 +281,14 @@ impl App {
         let system = device::root_disk(&disks);
         let shown: Vec<Disk> = disks
             .iter()
+            .filter(|disk| system.as_deref() != Some(disk.name.as_str()))
             .filter(|disk| !(hide_fixed && !disk.removable && !disk.hotplug))
             .cloned()
             .collect();
 
         self.ui.list.remove_all();
         for disk in &shown {
-            let mut text = disk.gui_line();
-            if system.as_deref() == Some(disk.name.as_str()) {
-                text.push_str("   [SYSTEM - cannot be wiped]");
-            }
+            let text = disk.gui_line();
             let label = gtk::Label::new(Some(&text));
             label.set_xalign(0.0);
             label.set_selectable(false);
@@ -320,8 +322,10 @@ impl App {
             self.set_status("Nothing selected.");
             return;
         }
-        let names: Vec<String> = selected.iter().map(|d| d.path.clone()).collect();
-        self.set_status(&format!("{} selected.", names.join(", ")));
+        // Name the whole drive, not just its node or the filesystem on it: a
+        // user juggling several sticks needs to see which one is selected.
+        let names: Vec<String> = selected.iter().map(Disk::selection_label).collect();
+        self.set_status(&format!("Selected: {}", names.join(" | ")));
     }
 
     fn on_full_wipe_toggled(self: &Rc<Self>) {
@@ -580,9 +584,9 @@ impl App {
                     "Started on {}. Approve the prompt, then watch the log. Formatting as {}.",
                     selected
                         .iter()
-                        .map(|d| d.path.clone())
+                        .map(Disk::selection_label)
                         .collect::<Vec<_>>()
-                        .join(", "),
+                        .join(" | "),
                     fs_name
                 ));
                 self.spawn_poll();
@@ -1093,6 +1097,13 @@ fn build_ui(application: &gtk::Application) {
     // --- drives ---
     let list = gtk::ListBox::new();
     list.set_selection_mode(gtk::SelectionMode::Multiple);
+    // GTK's single-click path in MULTIPLE mode only *adds* the clicked row
+    // (gtk_list_box_select_row_internal never clears the others), which makes a
+    // plain click behave like Ctrl+click and hooks every drive together. Turning
+    // single-click activation off routes a plain click through the path that
+    // replaces the selection, so: plain click = this one only, Ctrl+click = add
+    // or remove, Shift+click = range. That is the Windows behaviour users expect.
+    list.set_activate_on_single_click(false);
     let list_scroller = gtk::ScrolledWindow::new();
     list_scroller.set_child(Some(&list));
     list_scroller.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
@@ -1201,9 +1212,16 @@ fn build_ui(application: &gtk::Application) {
     root.append(&log_scroller);
 
     // --- status bar ---
+    // A plain `GtkLabel` asks for its whole text as its *minimum* width, so a
+    // long line here (a drive label, or several drives at once) drags the whole
+    // window out to fit it. Capping the width request and ellipsizing keeps the
+    // window at its designed size no matter what the status says; the full text
+    // is still available as a tooltip (see `App::set_status`).
     let status = gtk::Label::new(Some(READY));
     status.add_css_class("status");
     status.set_xalign(0.0);
+    status.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    status.set_max_width_chars(1);
     root.append(&status);
 
     window.set_child(Some(&root));

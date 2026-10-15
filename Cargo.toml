@@ -1,6 +1,6 @@
 [package]
 name = "usb-reformat"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 description = "Acronis-style disk utility: wipe, partition and format drives on Linux"
 license = "MIT"

@@ -7,9 +7,10 @@
 //! by `USB_REFORMAT_MUSIC`, overrides the baked-in set for swapping tunes
 //! without a rebuild.
 //!
-//! Modules are rendered by `xmrs` into `rodio`. Tracks still advance when a
-//! module actually reports itself finished rather than on a timer, and the same
-//! 15 minute guard exists to skip a module whose pattern jump never resolves.
+//! Modules are rendered by `xmrs` into `rodio`. Tracks advance when a module
+//! has played through once: `xmrsplayer` would otherwise loop it forever, so
+//! the source stops at the end-of-song wrap (see `TrackerSource`). The 15 minute
+//! guard remains as a backstop for a module whose pattern jump never resolves.
 //!
 //! Nothing here is load bearing. If there is no music, or the sound server is
 //! unreachable, the player reports itself unavailable and the rest of the
@@ -46,6 +47,11 @@ struct TrackerSource {
     /// The right channel of the sample pair whose left channel was just handed
     /// out. rodio pulls one sample at a time.
     pending_right: Option<i16>,
+    /// Highest timeline entry reached so far. The module has played through once
+    /// when the sequencer's entry index drops below this: `xmrsplayer` loops a
+    /// module by wrapping back to an earlier entry and never reports SongEnd on
+    /// its own, so catching the wrap is what makes a track finish.
+    high_water: usize,
     finished: bool,
 }
 
@@ -59,9 +65,17 @@ impl TrackerSource {
         // and only one is ever live, so the cost is bounded in practice.
         let module: &'static Module = Box::leak(Box::new(module));
 
+        // The loop cap is deliberately left at its default of "never end": it
+        // counts *any* revisit of an (order, row), and a module that repeats an
+        // order internally would be cut off after a couple of rows. `next`
+        // watches for the end-of-song wrap instead, which is the real "played
+        // once" point.
+        let player = XmrsPlayer::new(module, SAMPLE_RATE, 0);
+
         Ok(TrackerSource {
-            player: XmrsPlayer::new(module, SAMPLE_RATE, 0),
+            player,
             pending_right: None,
+            high_water: 0,
             finished: false,
         })
     }
@@ -76,18 +90,30 @@ impl Iterator for TrackerSource {
     type Item = i16;
 
     fn next(&mut self) -> Option<i16> {
-        if self.finished {
-            return None;
-        }
         if let Some(right) = self.pending_right.take() {
             return Some(right);
         }
+        if self.finished {
+            return None;
+        }
         match self.player.sample(true) {
             Some((left, right)) => {
+                // In-song jumps are pre-baked into the timeline, so the entry
+                // index only ever falls when the sequencer wraps back for the
+                // next pass. Ending the source there empties rodio's sink and
+                // lets the playlist move on.
+                let entry = self.player.timeline_index();
+                if entry < self.high_water {
+                    self.finished = true;
+                } else {
+                    self.high_water = entry;
+                }
                 self.pending_right = Some(right);
                 Some(left)
             }
             None => {
+                // A module with nothing to wrap to (or an empty timeline) ends
+                // on its own.
                 self.finished = true;
                 None
             }
@@ -484,6 +510,46 @@ mod tests {
         // at the repository root.
         assert!(dirs.len() >= 3, "expected several candidate directories");
         assert!(dirs.iter().all(|d| d.ends_with("music")));
+    }
+
+    /// Rendering a whole module is the only way to prove the playlist can move
+    /// on: `xmrsplayer` loops by default, so if the source never ends then
+    /// rodio's sink never empties. The smallest module in `music/` is used so
+    /// this stays a few seconds; the sample cap only exists so a regression
+    /// fails instead of hanging.
+    #[test]
+    fn a_rendered_module_reports_song_end() {
+        let Some(path) = shortest_module_in_music_dir() else {
+            return; // a checkout without music/ is still valid
+        };
+        let mut source = TrackerSource::from_path(&path).expect("load module");
+        let mut samples: u64 = 0;
+        while source.next().is_some() {
+            samples += 1;
+            assert!(
+                samples < 24_000_000,
+                "{} never reported SongEnd; the playlist would stall",
+                path.display()
+            );
+        }
+        assert!(samples > 0, "{} produced no audio", path.display());
+    }
+
+    /// The smallest playable file by size, or `None` when `music/` is absent.
+    fn shortest_module_in_music_dir() -> Option<PathBuf> {
+        let mut smallest: Option<(u64, PathBuf)> = None;
+        for track in tracks_in_dir(Path::new("music")) {
+            let Track::File { path, .. } = track else {
+                continue;
+            };
+            let Ok(size) = std::fs::metadata(&path).map(|m| m.len()) else {
+                continue;
+            };
+            if smallest.as_ref().is_none_or(|(best, _)| size < *best) {
+                smallest = Some((size, path));
+            }
+        }
+        smallest.map(|(_, path)| path)
     }
 
     #[test]

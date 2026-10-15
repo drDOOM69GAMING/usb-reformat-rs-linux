@@ -155,6 +155,20 @@ impl Disk {
         }
     }
 
+    /// The one-line identification used in status messages when a drive is
+    /// selected. It names the whole drive - device node, model, size and bus -
+    /// so a selection is never boiled down to just the filesystem it happens to
+    /// carry, which is all the list row's content column shows.
+    pub fn selection_label(&self) -> String {
+        format!(
+            "{}  {}  {}  {}",
+            self.path,
+            self.title(),
+            self.size_human(),
+            self.bus_label()
+        )
+    }
+
     /// The one-line form shown in the drive list.
     ///
     /// Windows printed `G:   MODEL   'LABEL'   14.9 GB free   [USB / removable / disk 3]`.
@@ -525,5 +539,28 @@ mod tests {
         assert!(line.contains("btrfs"), "{line}");
         assert!(line.contains("USB"), "{line}");
         assert!(line.contains("removable"), "{line}");
+    }
+
+    #[test]
+    fn selection_labels_name_the_whole_drive_not_just_the_filesystem() {
+        let disk = Disk {
+            name: "sdc".into(),
+            path: "/dev/sdc".into(),
+            model: "Cruzer Glide".into(),
+            tran: "usb".into(),
+            size_bytes: 128_000_000_000,
+            removable: true,
+            partitions: vec![Partition {
+                path: "/dev/sdc1".into(),
+                fstype: "ntfs".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let label = disk.selection_label();
+        assert!(label.contains("/dev/sdc"), "{label}");
+        assert!(label.contains("Cruzer Glide"), "{label}");
+        assert!(label.contains("128.0 GB"), "{label}");
+        assert!(label.contains("USB"), "{label}");
     }
 }
