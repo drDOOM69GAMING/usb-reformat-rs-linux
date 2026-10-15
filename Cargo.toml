@@ -1,0 +1,29 @@
+[package]
+name = "usb-reformat"
+version = "1.0.0"
+edition = "2021"
+description = "Acronis-style disk utility: wipe, partition and format drives on Linux"
+license = "MIT"
+repository = "https://github.com/drDOOM69GAMING/usb-reformat-rs-linux"
+readme = "README.md"
+
+[[bin]]
+name = "usb-reformat"
+path = "src/main.rs"
+
+[features]
+default = ["gui", "music"]
+gui = ["dep:gtk4"]
+music = ["dep:rodio", "dep:xmrs", "dep:xmrsplayer"]
+
+[dependencies]
+libc = "0.2"
+gtk4 = { version = "0.11.5", features = ["v4_24"], optional = true }
+rodio = { version = "0.17", optional = true }
+xmrs = { version = "0.15", features = ["import"], optional = true }
+xmrsplayer = { version = "0.15", optional = true }
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true

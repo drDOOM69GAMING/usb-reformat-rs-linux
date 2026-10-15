@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=USB Reformat (Linux)
+Comment=Wipe, partition and format USB and fixed drives
+Exec=usb-reformat
+Terminal=false
+Categories=Utility;System;
+StartupNotify=true
+Icon=drive-harddisk
+Keywords=usb;format;wipe;disk;partition;exfat;fat32;ntfs;ext4

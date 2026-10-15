@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm base-devel rustup gtk4 pkg-config alsa-lib pipewire libpulse ntfsprogs
+          rustup default stable
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Clippy (all features)
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Test (all features)
+        run: cargo test --all-features
+
+      - name: Test (no default features)
+        run: cargo test --no-default-features
+
+      - name: Build release
+        run: cargo build --release
