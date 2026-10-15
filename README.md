@@ -46,6 +46,11 @@ The binary is self-contained: the music and the NTFS formatter are both baked in
 - Built-in chiptune player (optional, enabled by default): the tracker modules are baked into the binary, so a lone executable still has music. A `music/` folder beside the program overrides them. Can be disabled with `--no-default-features`.
 - CLI: `--list` (read-only), `--status` (check required tools), `--help`. The `--run` family of flags is only used by the GUI when spawning the privileged worker via `pkexec`.
 
+  ## hotfix
+
+- Fixed clicking on drives and naming in the UI when clicked.
+- Added Holding CTRL + click to select and hook
+
 ## Requirements
 
 On CachyOS/Arch Linux you need:
