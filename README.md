@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/drDOOM69GAMING/usb-reformat-rs-linux/actions/workflows/ci.yml/badge.svg)](https://github.com/drDOOM69GAMING/usb-reformat-rs-linux/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/drDOOM69GAMING/usb-reformat-rs-linux?sort=semver)](https://github.com/drDOOM69GAMING/usb-reformat-rs-linux/releases)
-[![Downloads](https://img.shields.io/github/downloads/drDOOM69GAMING/usb-reformat-rs-linux/total)](https://github.com/drDOOM69GAMING/usb-reformat-rs-linux/releases)
+[![Downloads](https://img.shields.io/github/downloads/drDOOM69GAMING/usb-reformat-rs-linux/total?style=flat)](https://github.com/drDOOM69GAMING/usb-reformat-rs-linux/releases)
 [![License](https://img.shields.io/github/license/drDOOM69GAMING/usb-reformat-rs-linux)](LICENSE)
 [![Rust](https://img.shields.io/badge/language-Rust-000000?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![GTK4](https://img.shields.io/badge/GUI-GTK4-4A8CF7?logo=gtk&logoColor=white)](https://www.gtk.org/)
